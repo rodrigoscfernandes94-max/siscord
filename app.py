@@ -869,6 +869,10 @@ HTML_CONTENT = """
             setInterval(fetchServerData, 10000); // Sincroniza a cada 10 segundos automaticamente
         };
     </script>
+
+    <footer style="text-align: center; padding: 1.5rem; background-color: #1b3022; color: #86efac; font-size: 0.75rem; font-weight: bold; border-top: 1px solid #065f46; margin-top: auto;">
+        Desenvolvido pelo 2º Sgt Art Rodrigo Sá
+    </footer>
 </body>
 </html>
 """
