@@ -92,185 +92,192 @@ HTML_CONTENT = """
         }
     </script>
 </head>
-<body class="h-full bg-slate-100 text-slate-800 font-sans flex flex-col selection:bg-amber-500 selection:text-military-900">
+<body class="h-full bg-slate-100 text-slate-800 font-sans flex flex-col justify-between selection:bg-amber-500 selection:text-military-900">
 
-    <!-- Cabeçalho Institucional -->
-    <header class="bg-military-900 text-white shadow-lg border-b-4 border-amber-500 relative z-20">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3.5">
-                <div class="bg-gradient-to-br from-military-700 to-military-900 p-3 rounded-xl border border-amber-500/40 shadow-md flex items-center justify-center">
-                    <i class="fa-solid fa-shield-halved text-amber-400 text-2xl"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] uppercase tracking-widest text-amber-400 font-bold px-2 py-0.5 bg-amber-950/80 rounded border border-amber-500/40 shadow-xs">Exército Brasileiro</span>
-                        <span class="text-xs text-slate-300 font-medium">SISCORD v7.1 - Cmdo DAAe Ex (Nuvem em Tempo Real)</span>
+    <div class="flex-1 flex flex-col">
+        <!-- Cabeçalho Institucional -->
+        <header class="bg-military-900 text-white shadow-lg border-b-4 border-amber-500 relative z-20">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="bg-gradient-to-br from-military-700 to-military-900 p-3 rounded-xl border border-amber-500/40 shadow-md flex items-center justify-center">
+                        <i class="fa-solid fa-shield-halved text-amber-400 text-2xl"></i>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mt-0.5">Sistema de Controle de Relatório e Documentação</h1>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase tracking-widest text-amber-400 font-bold px-2 py-0.5 bg-amber-950/80 rounded border border-amber-500/40 shadow-xs">Exército Brasileiro</span>
+                            <span class="text-xs text-slate-300 font-medium">SISCORD v7.3 - Cmdo DAAe Ex (Nuvem em Tempo Real)</span>
+                        </div>
+                        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mt-0.5">Sistema de Controle de Relatório e Documentação</h1>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 bg-military-800/90 px-4 py-2.5 rounded-xl border border-military-700 shadow-inner">
+                    <div id="auth-status-indicator" class="w-3.5 h-3.5 bg-red-500 rounded-full shadow-sm"></div>
+                    <div class="text-xs">
+                        <p id="auth-status-title" class="font-bold text-white">Perfil: OMDS (Visualização)</p>
+                        <p id="auth-status-desc" class="text-slate-300">Acesso restrito à unidade</p>
+                    </div>
+                    <button onclick="openAuthModal()" class="ml-2 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-military-900 font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-lock text-[10px]"></i> Cmdo
+                    </button>
                 </div>
             </div>
+        </header>
+
+        <!-- Navegação por Abas -->
+        <nav class="bg-white border-b border-slate-200 shadow-sm overflow-x-auto sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-4 flex space-x-1.5 py-2.5 min-w-max" id="om-tabs-container"></div>
+        </nav>
+
+        <!-- Sub-Abas -->
+        <div class="bg-slate-50 border-b border-slate-200 py-2.5 shadow-xs">
+            <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="flex space-x-2 w-full sm:w-auto">
+                    <button onclick="switchSubTab('calendar')" id="btn-sub-calendar" class="flex-1 sm:flex-none px-4 py-2 bg-military-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-regular fa-calendar-days"></i> Calendário (01 a 31)
+                    </button>
+                    <button onclick="switchSubTab('files')" id="btn-sub-files" class="flex-1 sm:flex-none px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-all shadow-xs">
+                        <i class="fa-solid fa-folder-open text-military-700"></i> Arquivos & Retorno
+                        <span id="badge-active-files" class="ml-1 bg-military-700 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
+                    </button>
+                </div>
+                <div id="current-om-indicator" class="text-xs font-bold text-military-900 bg-amber-100 px-3.5 py-1.5 rounded-xl border border-amber-300 shadow-xs flex items-center gap-2">
+                    <i class="fa-solid fa-building-shield text-amber-700"></i> Visualizando: Cmdo DAAe Ex
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 overflow-y-auto space-y-6">
             
-            <div class="flex items-center gap-3 bg-military-800/90 px-4 py-2.5 rounded-xl border border-military-700 shadow-inner">
-                <div id="auth-status-indicator" class="w-3.5 h-3.5 bg-red-500 rounded-full shadow-sm"></div>
-                <div class="text-xs">
-                    <p id="auth-status-title" class="font-bold text-white">Perfil: OMDS (Visualização)</p>
-                    <p id="auth-status-desc" class="text-slate-300">Acesso restrito à unidade</p>
+            <!-- ALERTA DE PRAZOS VENCENDO HOJE -->
+            <div id="urgent-alert-banner" class="hidden bg-red-50 border-4 border-red-600 rounded-2xl p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-bounce ring-4 ring-red-400/50">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-red-600 text-white rounded-xl flex items-center justify-center text-3xl shadow-md shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-red-900 font-black text-lg tracking-wider uppercase">ATENÇÃO OMDS! Novo Documento / Aviso Recebido.</h3>
+                        <p id="urgent-alert-text" class="text-xs text-red-800 font-bold mt-1">Confirme o recebimento clicando no botão Ciente.</p>
+                    </div>
                 </div>
-                <button onclick="openAuthModal()" class="ml-2 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-military-900 font-bold rounded-lg text-xs transition-all shadow-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-lock text-[10px]"></i> Cmdo
+                <button onclick="acknowledgeUrgentDeadline()" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-sm shadow-xl transition-all whitespace-nowrap flex items-center gap-2 border-2 border-white">
+                    <i class="fa-solid fa-check-double text-base"></i> Ciente
                 </button>
             </div>
-        </div>
-    </header>
 
-    <!-- Navegação por Abas -->
-    <nav class="bg-white border-b border-slate-200 shadow-sm overflow-x-auto sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 flex space-x-1.5 py-2.5 min-w-max" id="om-tabs-container"></div>
-    </nav>
+            <!-- PAINEL DE CONTROLE DE CIENTES -->
+            <div id="cmdo-cientes-panel" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-military-700"></i> Histórico de Recebido - OMDS
+                    </h3>
+                    <button onclick="clearCmdoCientes()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-bold px-2.5 py-1 rounded-lg border border-red-200 transition-colors shadow-xs">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Limpar Histórico
+                    </button>
+                </div>
+                <div id="cmdo-cientes-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
+            </div>
 
-    <!-- Sub-Abas -->
-    <div class="bg-slate-50 border-b border-slate-200 py-2.5 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div class="flex space-x-2 w-full sm:w-auto">
-                <button onclick="switchSubTab('calendar')" id="btn-sub-calendar" class="flex-1 sm:flex-none px-4 py-2 bg-military-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all">
-                    <i class="fa-regular fa-calendar-days"></i> Calendário (01 a 31)
-                </button>
-                <button onclick="switchSubTab('files')" id="btn-sub-files" class="flex-1 sm:flex-none px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center justify-center gap-2 transition-all shadow-xs">
-                    <i class="fa-solid fa-folder-open text-military-700"></i> Arquivos & Retorno
-                    <span id="badge-active-files" class="ml-1 bg-military-700 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">0</span>
-                </button>
-            </div>
-            <div id="current-om-indicator" class="text-xs font-bold text-military-900 bg-amber-100 px-3.5 py-1.5 rounded-xl border border-amber-300 shadow-xs flex items-center gap-2">
-                <i class="fa-solid fa-building-shield text-amber-700"></i> Visualizando: Cmdo DAAe Ex
-            </div>
-        </div>
+            <!-- SEÇÃO 1: CALENDÁRIO MENSAL -->
+            <section id="section-calendar" class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 id="calendar-header-title" class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+                            <i class="fa-solid fa-calendar-check text-military-700"></i> Calendário Administrativo
+                        </h2>
+                        <p id="calendar-header-desc" class="text-sm text-slate-500 mt-0.5">Selecione um dia (01 a 31) para gerenciar anotações direcionadas.</p>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                        <label for="select-month" class="text-xs font-bold uppercase text-slate-700">Mês / Ano:</label>
+                        <input type="month" id="select-month" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-military-600" min="2020-01" max="2040-12" onchange="renderCalendar()">
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+                    <div id="calendar-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3.5"></div>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 2: GESTÃO DE ARQUIVOS E RETORNOS -->
+            <section id="section-files" class="space-y-6 hidden">
+                <div id="upload-card-container" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+                    <h2 id="upload-section-title" class="text-lg font-bold text-slate-900 flex items-center gap-2.5 mb-1">
+                        <i class="fa-solid fa-cloud-arrow-up text-military-700"></i> Envio de Documentos / Diretrizes
+                    </h2>
+                    <p id="upload-section-desc" class="text-sm text-slate-500 mb-5">Envie arquivos e selecione as OMDS destinatárias.</p>
+                    
+                    <div id="cmdo-target-selection" class="mb-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-bold uppercase text-slate-700">Selecione as OMDS Destinatárias:</label>
+                            <div class="space-x-2">
+                                <button type="button" onclick="selectAllOm(true)" class="text-[11px] text-military-700 hover:underline font-semibold">Marcar Todas</button>
+                                <span class="text-slate-300">|</span>
+                                <button type="button" onclick="selectAllOm(false)" class="text-[11px] text-red-600 hover:underline font-semibold">Desmarcar</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5" id="checkbox-om-list"></div>
+                    </div>
+
+                    <div class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-military-600 transition-all bg-slate-50 relative group cursor-pointer shadow-xs mb-4" onclick="document.getElementById('file-input').click()">
+                        <input type="file" id="file-input" class="hidden" multiple onchange="handleFileUpload(event)">
+                        <div class="w-16 h-16 bg-military-100 text-military-700 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform shadow-sm">
+                            <i class="fa-solid fa-file-arrow-up text-2xl"></i>
+                        </div>
+                        <p class="font-bold text-slate-700">Clique para selecionar arquivos ou arraste-os para esta área</p>
+                        <p class="text-xs text-slate-400 mt-1">Sincronizado automaticamente via nuvem em tempo real.</p>
+                    </div>
+
+                    <div class="max-w-xs">
+                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Data Limite / Prazo (Opcional):</label>
+                        <input type="date" id="file-due-date" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-military-600">
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+                        <h3 class="font-bold text-slate-900 flex items-center gap-2.5 text-base">
+                            <i class="fa-solid fa-box-archive text-military-700"></i> Repositório de Documentos e Sinal Verde de Retorno
+                        </h3>
+                        <div class="flex items-center gap-2.5 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-72">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                                </span>
+                                <input type="text" id="search-file" placeholder="Pesquisar por nome ou OM..." class="pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-military-600 bg-slate-50" oninput="renderFileList()">
+                            </div>
+                            <button id="btn-clear-history" onclick="clearAllFiles()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-bold px-3 py-2 rounded-xl border border-red-200 transition-colors whitespace-nowrap hidden shadow-xs">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Limpar Tudo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs font-bold text-slate-600 uppercase bg-slate-50 tracking-wider">
+                                    <th class="py-3.5 px-4">Nome do Arquivo</th>
+                                    <th class="py-3.5 px-4">Remetente / Destinatário</th>
+                                    <th class="py-3.5 px-4">Status / Retorno</th>
+                                    <th class="py-3.5 px-4">Data/Hora</th>
+                                    <th class="py-3.5 px-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="file-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                    <div id="no-files-msg" class="text-center py-12 text-slate-400 hidden">
+                        <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                        <p class="font-medium text-slate-600">Nenhum arquivo no histórico desta aba.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Conteúdo Principal -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 overflow-y-auto space-y-6">
-        
-        <!-- ALERTA DE PRAZOS VENCENDO HOJE -->
-        <div id="urgent-alert-banner" class="hidden bg-red-50 border-4 border-red-600 rounded-2xl p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-bounce ring-4 ring-red-400/50">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-red-600 text-white rounded-xl flex items-center justify-center text-3xl shadow-md shrink-0">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-                <div>
-                    <h3 class="text-red-900 font-black text-lg tracking-wider uppercase">ATENÇÃO OMDS! Novo Documento / Aviso Recebido.</h3>
-                    <p id="urgent-alert-text" class="text-xs text-red-800 font-bold mt-1">Confirme o recebimento clicando no botão Ciente.</p>
-                </div>
-            </div>
-            <button onclick="acknowledgeUrgentDeadline()" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-sm shadow-xl transition-all whitespace-nowrap flex items-center gap-2 border-2 border-white">
-                <i class="fa-solid fa-check-double text-base"></i> Ciente
-            </button>
-        </div>
-
-        <!-- PAINEL DE CONTROLE DE CIENTES -->
-        <div id="cmdo-cientes-panel" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-clipboard-check text-military-700"></i> Histórico de Recebido - OMDS
-                </h3>
-                <button onclick="clearCmdoCientes()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-bold px-2.5 py-1 rounded-lg border border-red-200 transition-colors shadow-xs">
-                    <i class="fa-solid fa-trash-can mr-1"></i> Limpar Histórico
-                </button>
-            </div>
-            <div id="cmdo-cientes-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
-        </div>
-
-        <!-- SEÇÃO 1: CALENDÁRIO MENSAL -->
-        <section id="section-calendar" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div>
-                    <h2 id="calendar-header-title" class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-                        <i class="fa-solid fa-calendar-check text-military-700"></i> Calendário Administrativo
-                    </h2>
-                    <p id="calendar-header-desc" class="text-sm text-slate-500 mt-0.5">Selecione um dia (01 a 31) para gerenciar anotações direcionadas.</p>
-                </div>
-                <div class="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                    <label for="select-month" class="text-xs font-bold uppercase text-slate-700">Mês / Ano:</label>
-                    <input type="month" id="select-month" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-military-600" min="2020-01" max="2040-12" onchange="renderCalendar()">
-                </div>
-            </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-                <div id="calendar-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3.5"></div>
-            </div>
-        </section>
-
-        <!-- SEÇÃO 2: GESTÃO DE ARQUIVOS E RETORNOS -->
-        <section id="section-files" class="space-y-6 hidden">
-            <div id="upload-card-container" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-                <h2 id="upload-section-title" class="text-lg font-bold text-slate-900 flex items-center gap-2.5 mb-1">
-                    <i class="fa-solid fa-cloud-arrow-up text-military-700"></i> Envio de Documentos / Diretrizes
-                </h2>
-                <p id="upload-section-desc" class="text-sm text-slate-500 mb-5">Envie arquivos e selecione as OMDS destinatárias.</p>
-                
-                <div id="cmdo-target-selection" class="mb-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-xs font-bold uppercase text-slate-700">Selecione as OMDS Destinatárias:</label>
-                        <div class="space-x-2">
-                            <button type="button" onclick="selectAllOm(true)" class="text-[11px] text-military-700 hover:underline font-semibold">Marcar Todas</button>
-                            <span class="text-slate-300">|</span>
-                            <button type="button" onclick="selectAllOm(false)" class="text-[11px] text-red-600 hover:underline font-semibold">Desmarcar</button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5" id="checkbox-om-list"></div>
-                </div>
-
-                <div class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-military-600 transition-all bg-slate-50 relative group cursor-pointer shadow-xs mb-4" onclick="document.getElementById('file-input').click()">
-                    <input type="file" id="file-input" class="hidden" multiple onchange="handleFileUpload(event)">
-                    <div class="w-16 h-16 bg-military-100 text-military-700 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform shadow-sm">
-                        <i class="fa-solid fa-file-arrow-up text-2xl"></i>
-                    </div>
-                    <p class="font-bold text-slate-700">Clique para selecionar arquivos ou arraste-os para esta área</p>
-                    <p class="text-xs text-slate-400 mt-1">Sincronizado automaticamente via nuvem em tempo real.</p>
-                </div>
-
-                <div class="max-w-xs">
-                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Data Limite / Prazo (Opcional):</label>
-                    <input type="date" id="file-due-date" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-military-600">
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
-                    <h3 class="font-bold text-slate-900 flex items-center gap-2.5 text-base">
-                        <i class="fa-solid fa-box-archive text-military-700"></i> Repositório de Documentos e Sinal Verde de Retorno
-                    </h3>
-                    <div class="flex items-center gap-2.5 w-full sm:w-auto">
-                        <div class="relative w-full sm:w-72">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                            </span>
-                            <input type="text" id="search-file" placeholder="Pesquisar por nome ou OM..." class="pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-military-600 bg-slate-50" oninput="renderFileList()">
-                        </div>
-                        <button id="btn-clear-history" onclick="clearAllFiles()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-bold px-3 py-2 rounded-xl border border-red-200 transition-colors whitespace-nowrap hidden shadow-xs">
-                            <i class="fa-solid fa-trash-can mr-1"></i> Limpar Tudo
-                        </button>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto rounded-xl border border-slate-200">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-xs font-bold text-slate-600 uppercase bg-slate-50 tracking-wider">
-                                <th class="py-3.5 px-4">Nome do Arquivo</th>
-                                <th class="py-3.5 px-4">Remetente / Destinatário</th>
-                                <th class="py-3.5 px-4">Status / Retorno</th>
-                                <th class="py-3.5 px-4">Data/Hora</th>
-                                <th class="py-3.5 px-4 text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="file-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
-                    </table>
-                </div>
-                <div id="no-files-msg" class="text-center py-12 text-slate-400 hidden">
-                    <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-300"></i>
-                    <p class="font-medium text-slate-600">Nenhum arquivo no histórico desta aba.</p>
-                </div>
-            </div>
-        </section>
-    </main>
+    <!-- Rodapé Fixo na Parte Inferior -->
+    <footer style="text-align: center; padding: 1.5rem; background-color: #022c22; color: #86efac; font-size: 0.75rem; font-weight: bold; border-top: 1px solid #14532d; width: 100%;">
+        Desenvolvido pelo 2º Sgt Art Rodrigo Sá
+    </footer>
 
     <!-- MODAL DE ANOTAÇÃO -->
     <div id="modal-annotation" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -363,7 +370,7 @@ HTML_CONTENT = """
         let serverData = { annotations: {}, files: [], cientes: {} };
         let currentOmTab = 'Cmdo DAAe Ex';
         let currentSubTab = 'calendar';
-        let authenticatedOms = JSON.parse(sessionStorage.getItem('siscord_auth_v71') || '{}');
+        let authenticatedOms = JSON.parse(sessionStorage.getItem('siscord_auth_v73') || '{}');
         let pendingOmTab = null;
         let currentSelectedDayKey = null;
 
@@ -539,7 +546,7 @@ HTML_CONTENT = """
 
             if (pwd === expectedPwd || (targetOm === 'Cmdo DAAe Ex' && pwd === 'BiaC')) {
                 authenticatedOms[targetOm] = true;
-                sessionStorage.setItem('siscord_auth_v71', JSON.stringify(authenticatedOms));
+                sessionStorage.setItem('siscord_auth_v73', JSON.stringify(authenticatedOms));
                 closeAuthModal();
                 switchOmTab(targetOm);
                 showCustomModal('Acesso Concedido', `Aba de ${targetOm} desbloqueada!`, 'success');
@@ -866,13 +873,9 @@ HTML_CONTENT = """
             initOmCheckboxes();
             updatePermissionsUI();
             await fetchServerData();
-            setInterval(fetchServerData, 10000); // Sincroniza a cada 10 segundos automaticamente
+            setInterval(fetchServerData, 10000);
         };
     </script>
-
-    <footer style="text-align: center; padding: 1.5rem; background-color: #1b3022; color: #86efac; font-size: 0.75rem; font-weight: bold; border-top: 1px solid #065f46; margin-top: auto;">
-        Desenvolvido pelo 2º Sgt Art Rodrigo Sá
-    </footer>
 </body>
 </html>
 """
