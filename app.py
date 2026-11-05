@@ -1,33 +1,63 @@
-from flask import Flask, render_template_string, request, jsonify
 import os
 import json
-from datetime import datetime
+from flask import Flask, render_template_string, request, jsonify
 
 app = Flask(__name__)
 
 DB_FILE = "siscord_database.json"
 
 def load_data():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
-        "annotations": {},
-        "files": [],
-        "cientes": {}
-    }
+    if not os.path.exists(DB_FILE):
+        initial_data = {
+            "annotations": {},
+            "files": [],
+            "cientes": {}
+        }
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(initial_data, f, ensure_ascii=False, indent=4)
+        return initial_data
+    try:
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"annotations": {}, "files": [], "cientes": {}}
 
 def save_data(data):
-    try:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Erro ao salvar dados: {e}")
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-HTML_TEMPLATE = r"""<!DOCTYPE html>
+@app.route("/")
+def index():
+    return render_template_string(HTML_CONTENT)
+
+@app.route("/api/data", methods=["GET"])
+def get_data():
+    return jsonify(load_data())
+
+@app.route("/api/data", methods=["POST"])
+def update_data():
+    req_data = request.json
+    if not req_data:
+        return jsonify({"status": "error", "message": "No data provided"}), 400
+    save_data(req_data)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/clear-files", methods=["POST"])
+def clear_files():
+    data = load_data()
+    data["files"] = []
+    save_data(data)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/clear-cientes", methods=["POST"])
+def clear_cientes():
+    data = load_data()
+    data["cientes"] = {}
+    save_data(data)
+    return jsonify({"status": "ok"})
+
+HTML_CONTENT = """
+<!DOCTYPE html>
 <html lang="pt-BR" class="h-full">
 <head>
     <meta charset="UTF-8">
@@ -74,7 +104,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                 <div>
                     <div class="flex items-center gap-2">
                         <span class="text-[10px] uppercase tracking-widest text-amber-400 font-bold px-2 py-0.5 bg-amber-950/80 rounded border border-amber-500/40 shadow-xs">Exército Brasileiro</span>
-                        <span class="text-xs text-slate-300 font-medium">SISCORD v7.0 - Cmdo DAAe Ex (Nuvem em Tempo Real)</span>
+                        <span class="text-xs text-slate-300 font-medium">SISCORD v7.1 - Cmdo DAAe Ex (Nuvem em Tempo Real)</span>
                     </div>
                     <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mt-0.5">Sistema de Controle de Relatório e Documentação</h1>
                 </div>
@@ -137,9 +167,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
         <!-- PAINEL DE CONTROLE DE CIENTES -->
         <div id="cmdo-cientes-panel" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-3">
-                <i class="fa-solid fa-clipboard-check text-military-700"></i> Histórico de Recebido - OMDS
-            </h3>
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check text-military-700"></i> Histórico de Recebido - OMDS
+                </h3>
+                <button onclick="clearCmdoCientes()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-bold px-2.5 py-1 rounded-lg border border-red-200 transition-colors shadow-xs">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Limpar Histórico
+                </button>
+            </div>
             <div id="cmdo-cientes-list" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
         </div>
 
@@ -188,7 +223,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                         <i class="fa-solid fa-file-arrow-up text-2xl"></i>
                     </div>
                     <p class="font-bold text-slate-700">Clique para selecionar arquivos ou arraste-os para esta área</p>
-                    <p class="text-xs text-slate-400 mt-1">Sincronizado automaticamente via servidor na nuvem.</p>
+                    <p class="text-xs text-slate-400 mt-1">Sincronizado automaticamente via nuvem em tempo real.</p>
                 </div>
 
                 <div class="max-w-xs">
@@ -325,31 +360,38 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             '11º GAAAe': '11G', '12º GAAAe': '12G', 'B Mnt Sup AAAe': 'BMnt', 'Bia C/Cmdo DAAe Ex': 'BiaC', 'Cia Com DAAe': 'Com'
         };
 
-        let dbData = { annotations: {}, files: [], cientes: {} };
+        let serverData = { annotations: {}, files: [], cientes: {} };
         let currentOmTab = 'Cmdo DAAe Ex';
         let currentSubTab = 'calendar';
-        let authenticatedOms = JSON.parse(sessionStorage.getItem('siscord_auth_v7') || '{}');
+        let authenticatedOms = JSON.parse(sessionStorage.getItem('siscord_auth_v71') || '{}');
         let pendingOmTab = null;
         let currentSelectedDayKey = null;
 
-        async function fetchDb() {
+        async function fetchServerData() {
             try {
                 const res = await fetch('/api/data');
-                dbData = await res.json();
-                renderAll();
-            } catch(e) { console.error(e); }
+                if (res.ok) {
+                    serverData = await res.json();
+                    renderAll();
+                }
+            } catch(e) {
+                console.error("Erro ao buscar dados do servidor:", e);
+            }
         }
 
-        async function postDb(endpoint, payload) {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            return await res.json();
+        async function saveServerData() {
+            try {
+                await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(serverData)
+                });
+            } catch(e) {
+                console.error("Erro ao salvar dados no servidor:", e);
+            }
         }
 
-        function initOmTabs() {
+        window.initOmTabs = function() {
             const container = document.getElementById('om-tabs-container');
             if(!container) return;
             container.innerHTML = '';
@@ -372,7 +414,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             });
         }
 
-        function initOmCheckboxes() {
+        window.initOmCheckboxes = function() {
             ['checkbox-om-list', 'annotation-checkbox-list'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
@@ -387,8 +429,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             });
         }
 
-        function selectAllOm(status) { document.querySelectorAll('input[name="target-om"]').forEach(cb => cb.checked = status); }
-        function selectAnnotationOm(status) { document.querySelectorAll('input[name="annot-target-om"]').forEach(cb => cb.checked = status); }
+        window.selectAllOm = (status) => document.querySelectorAll('input[name="target-om"]').forEach(cb => cb.checked = status);
+        window.selectAnnotationOm = (status) => document.querySelectorAll('input[name="annot-target-om"]').forEach(cb => cb.checked = status);
 
         const monthInputEl = document.getElementById('select-month');
         const now = new Date();
@@ -396,7 +438,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             monthInputEl.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
         }
 
-        function trySwitchOmTab(omName) {
+        window.trySwitchOmTab = (omName) => {
             if (authenticatedOms[omName]) {
                 switchOmTab(omName);
             } else {
@@ -405,7 +447,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             }
         }
 
-        function switchOmTab(omName) {
+        window.switchOmTab = (omName) => {
             currentOmTab = omName;
             initOmTabs();
             document.getElementById('current-om-indicator').innerHTML = `<i class="fa-solid fa-building-shield text-amber-700"></i> Visualizando: ${omName}`;
@@ -413,7 +455,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             renderAll();
         }
 
-        function switchSubTab(subName) {
+        window.switchSubTab = (subName) => {
             currentSubTab = subName;
             const calSection = document.getElementById('section-calendar');
             const filesSection = document.getElementById('section-files');
@@ -477,7 +519,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             }
         }
 
-        function openAuthModal(omName) {
+        window.openAuthModal = (omName) => {
             pendingOmTab = omName || currentOmTab;
             document.getElementById('modal-auth-title').textContent = 'Acesso Restrito: ' + pendingOmTab;
             document.getElementById('auth-password-input').value = '';
@@ -485,19 +527,19 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             setTimeout(() => document.getElementById('auth-password-input').focus(), 100);
         }
 
-        function closeAuthModal() {
+        window.closeAuthModal = () => {
             document.getElementById('modal-auth').classList.add('hidden');
             pendingOmTab = null;
         }
 
-        function verifyCommandPassword() {
+        window.verifyCommandPassword = () => {
             const pwd = document.getElementById('auth-password-input').value;
             const targetOm = pendingOmTab || currentOmTab;
             const expectedPwd = targetOm === 'Cmdo DAAe Ex' ? 'ARTILHARIA' : omPasswords[targetOm];
 
             if (pwd === expectedPwd || (targetOm === 'Cmdo DAAe Ex' && pwd === 'BiaC')) {
                 authenticatedOms[targetOm] = true;
-                sessionStorage.setItem('siscord_auth_v7', JSON.stringify(authenticatedOms));
+                sessionStorage.setItem('siscord_auth_v71', JSON.stringify(authenticatedOms));
                 closeAuthModal();
                 switchOmTab(targetOm);
                 showCustomModal('Acesso Concedido', `Aba de ${targetOm} desbloqueada!`, 'success');
@@ -529,17 +571,17 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                 if (cmdoCientesList) {
                     cmdoCientesList.innerHTML = '';
                     let total = 0;
-                    for (let fileId in dbData.cientes) {
-                        let record = dbData.cientes[fileId];
+                    for (let fileId in serverData.cientes) {
+                        let record = serverData.cientes[fileId];
                         let fileName = 'Documento / Anotação';
                         
-                        let fileObj = (dbData.files || []).find(f => f.id === fileId);
+                        let fileObj = (serverData.files || []).find(f => f.id === fileId);
                         if (fileObj) {
                             fileName = fileObj.name;
                         } else if (fileId.startsWith('ann_')) {
                             let dayKeyAnn = fileId.replace('ann_', '');
-                            if (dbData.annotations && dbData.annotations[dayKeyAnn]) {
-                                let annText = dbData.annotations[dayKeyAnn].text || '';
+                            if (serverData.annotations && serverData.annotations[dayKeyAnn]) {
+                                let annText = serverData.annotations[dayKeyAnn].text || '';
                                 if (annText.length > 50) annText = annText.substring(0, 47) + '...';
                                 fileName = `Anotação (${dayKeyKeyFormat(dayKeyAnn)}): "${annText}"`;
                             } else {
@@ -565,15 +607,18 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             }
 
             let urgentItems = [];
-            (dbData.files || []).forEach(f => {
+
+            (serverData.files || []).forEach(f => {
                 if (f.dueDate && f.dueDate === todayStr && f.targets && f.targets.includes(currentOmTab)) {
-                    let already = dbData.cientes && dbData.cientes[f.id] && dbData.cientes[f.id].some(c => c.om === currentOmTab);
-                    if (!already) urgentItems.push(f.name);
+                    let alreadyAcknowledged = serverData.cientes && serverData.cientes[f.id] && serverData.cientes[f.id].some(c => c.om === currentOmTab);
+                    if (!alreadyAcknowledged) {
+                        urgentItems.push(f.name);
+                    }
                 }
             });
 
-            if (dbData.annotations && dbData.annotations[todayStr]) {
-                let ann = dbData.annotations[todayStr];
+            if (serverData.annotations && serverData.annotations[todayStr]) {
+                let ann = serverData.annotations[todayStr];
                 if (ann.targets && ann.targets.includes(currentOmTab) && ann.text.trim().length > 0) {
                     urgentItems.push(`Anotação: "${ann.text}"`);
                 }
@@ -594,16 +639,49 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             return dk;
         }
 
-        async function acknowledgeUrgentDeadline() {
+        window.acknowledgeUrgentDeadline = async () => {
             const todayDate = new Date();
             const todayStr = todayDate.getFullYear() + '-' + String(todayDate.getMonth() + 1).padStart(2, '0') + '-' + String(todayDate.getDate()).padStart(2, '0');
             
-            const res = await postDb('/api/ciente', { om: currentOmTab, todayStr: todayStr });
-            if (res.status === 'ok') {
-                await fetchDb();
-                document.getElementById('urgent-alert-banner').classList.add('hidden');
-                showCustomModal('Registrado', 'Confirmação de ciente enviada ao Comando!', 'success');
+            let targetFiles = (serverData.files || []).filter(f => f.targets && f.targets.includes(currentOmTab));
+            let hasTodayAnnotation = serverData.annotations && serverData.annotations[todayStr] && serverData.annotations[todayStr].targets && serverData.annotations[todayStr].targets.includes(currentOmTab);
+
+            if (!serverData.cientes) serverData.cientes = {};
+
+            let recordedIds = [];
+
+            targetFiles.forEach(f => {
+                if (f.dueDate === todayStr) {
+                    recordedIds.push(f.id);
+                }
+            });
+
+            if (hasTodayAnnotation) {
+                recordedIds.push('ann_' + todayStr);
             }
+
+            if (recordedIds.length === 0) {
+                recordedIds.push('gen_' + todayStr + '_' + currentOmTab);
+            }
+
+            recordedIds.forEach(idKey => {
+                if (!serverData.cientes[idKey]) serverData.cientes[idKey] = [];
+                if (!serverData.cientes[idKey].some(c => c.om === currentOmTab)) {
+                    serverData.cientes[idKey].push({ om: currentOmTab, dateTime: new Date().toLocaleString('pt-BR') });
+                }
+            });
+
+            await saveServerData();
+            document.getElementById('urgent-alert-banner').classList.add('hidden');
+            showCustomModal('Registrado', 'Confirmação de ciente enviada ao Comando com sucesso!', 'success');
+        }
+
+        window.clearCmdoCientes = async () => {
+            if (!confirm('Deseja realmente limpar todo o histórico de cientes das OMDS?')) return;
+            serverData.cientes = {};
+            await saveServerData();
+            renderAll();
+            showCustomModal('Histórico Limpo', 'O registro de cientes foi esvaziado com sucesso.', 'info');
         }
 
         function renderCalendar() {
@@ -618,7 +696,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                 const dayStr = day < 10 ? '0' + day : '' + day;
                 const dayKey = `${year}-${month}-${dayStr}`;
                 const isOutOfBounds = day > totalDays;
-                const annObj = dbData.annotations[dayKey];
+                const annObj = serverData.annotations[dayKey];
 
                 let visibleAnnotation = '';
                 if (annObj) {
@@ -649,10 +727,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             }
         }
 
-        function openAnnotationModal(dayKey, day, month, year) {
+        window.openAnnotationModal = (dayKey, day, month, year) => {
             currentSelectedDayKey = dayKey;
             document.getElementById('modal-title').textContent = `Anotação do Dia ${day}/${month}/${year}`;
-            const existing = dbData.annotations[dayKey] || { text: '', targets: [] };
+            const existing = serverData.annotations[dayKey] || { text: '', targets: [] };
             document.getElementById('annotation-text').value = existing.text || '';
             document.querySelectorAll('input[name="annot-target-om"]').forEach(cb => {
                 cb.checked = existing.targets && existing.targets.includes(cb.value);
@@ -660,20 +738,23 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             document.getElementById('modal-annotation').classList.remove('hidden');
         }
 
-        function closeAnnotationModal() { document.getElementById('modal-annotation').classList.add('hidden'); }
+        window.closeAnnotationModal = () => document.getElementById('modal-annotation').classList.add('hidden');
 
-        async function saveAnnotation() {
+        window.saveAnnotation = async () => {
             const textValue = document.getElementById('annotation-text').value;
             const selectedTargets = [];
             document.querySelectorAll('input[name="annot-target-om"]:checked').forEach(cb => selectedTargets.push(cb.value));
 
-            await postDb('/api/annotation', { dayKey: currentSelectedDayKey, text: textValue, targets: selectedTargets });
+            if(!serverData.annotations) serverData.annotations = {};
+            serverData.annotations[currentSelectedDayKey] = { text: textValue, targets: selectedTargets };
+
+            await saveServerData();
             closeAnnotationModal();
-            await fetchDb();
-            showCustomModal('Sucesso', 'Anotação salva com sucesso!', 'success');
+            renderCalendar();
+            showCustomModal('Sucesso', 'Anotação salva no servidor com sucesso!', 'success');
         }
 
-        async function handleFileUpload(event) {
+        window.handleFileUpload = async (event) => {
             const files = event.target.files;
             if (!files.length) return;
             const dueDateVal = document.getElementById('file-due-date').value;
@@ -685,19 +766,24 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                 targets.push('Cmdo DAAe Ex');
             }
 
+            if(!serverData.files) serverData.files = [];
+
             for (let file of files) {
                 const reader = new FileReader();
                 reader.onload = async function(e) {
-                    await postDb('/api/upload', {
+                    serverData.files.unshift({
+                        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
                         name: file.name,
                         type: file.type || 'application/octet-stream',
                         size: (file.size / 1024).toFixed(1) + ' KB',
+                        date: new Date().toLocaleString('pt-BR'),
                         dueDate: dueDateVal || null,
                         sender: currentOmTab,
                         targets: targets,
                         dataUrl: e.target.result
                     });
-                    await fetchDb();
+                    await saveServerData();
+                    renderFileList();
                     event.target.value = '';
                     showCustomModal('Upload', 'Arquivo enviado com sucesso!', 'success');
                 };
@@ -712,7 +798,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             if(!tbody) return;
             tbody.innerHTML = '';
 
-            const filtered = (dbData.files || []).filter(f => {
+            const filtered = (serverData.files || []).filter(f => {
                 if (currentOmTab === 'Cmdo DAAe Ex') return f.sender === 'Cmdo DAAe Ex' || (f.targets && f.targets.includes('Cmdo DAAe Ex'));
                 return (f.targets && f.targets.includes(currentOmTab)) || f.sender === currentOmTab;
             });
@@ -740,8 +826,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             });
         }
 
-        function previewFile(id) {
-            const file = dbData.files.find(f => f.id === id);
+        window.previewFile = (id) => {
+            const file = serverData.files.find(f => f.id === id);
             if (!file) return;
             document.getElementById('preview-modal-title').textContent = file.name;
             document.getElementById('preview-file-info').textContent = `Remetente: ${file.sender} | Data: ${file.date}`;
@@ -752,122 +838,40 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             document.getElementById('modal-preview').classList.remove('hidden');
         }
 
-        function closePreviewModal() { document.getElementById('modal-preview').classList.add('hidden'); }
+        window.closePreviewModal = () => document.getElementById('modal-preview').classList.add('hidden');
 
-        async function deleteFile(id) {
-            await postDb('/api/delete-file', { id });
-            await fetchDb();
+        window.deleteFile = async (id) => {
+            serverData.files = serverData.files.filter(f => f.id !== id);
+            await saveServerData();
+            renderFileList();
             showCustomModal('Excluído', 'Arquivo removido com sucesso.', 'info');
         }
 
-        async function clearAllFiles() {
-            await postDb('/api/clear-files', {});
-            await fetchDb();
+        window.clearAllFiles = async () => {
+            serverData.files = [];
+            await saveServerData();
+            renderFileList();
             showCustomModal('Repositório Limpo', 'Todos os arquivos foram removidos.', 'info');
         }
 
-        function showCustomModal(title, msg, type) {
+        window.showCustomModal = (title, msg, type) => {
             document.getElementById('custom-modal-title').textContent = title;
             document.getElementById('custom-modal-message').textContent = msg;
             document.getElementById('custom-modal').classList.remove('hidden');
         }
-        function closeCustomModal() { document.getElementById('custom-modal').classList.add('hidden'); }
+        window.closeCustomModal = () => document.getElementById('custom-modal').classList.add('hidden');
 
         window.onload = async () => {
             initOmTabs();
             initOmCheckboxes();
             updatePermissionsUI();
-            await fetchDb();
-            setInterval(fetchDb, 4000); // Sincronização automática em tempo real a cada 4 segundos
+            await fetchServerData();
+            setInterval(fetchServerData, 10000); // Sincroniza a cada 10 segundos automaticamente
         };
     </script>
 </body>
 </html>
 """
-
-@app.route("/")
-def index():
-    return render_template_string(HTML_TEMPLATE)
-
-@app.route("/api/data")
-def get_data():
-    return jsonify(load_data())
-
-@app.route("/api/annotation", methods=["POST"])
-def post_annotation():
-    req = request.json
-    data = load_data()
-    data["annotations"][req["dayKey"]] = {
-        "text": req["text"],
-        "targets": req["targets"]
-    }
-    save_data(data)
-    return jsonify({"status": "ok"})
-
-@app.route("/api/upload", methods=["POST"])
-def post_upload():
-    req = request.json
-    data = load_data()
-    new_file = {
-        "id": f"file_{datetime.now().strftime('%Y%m%d%H%M%S')}_{os.urandom(3).hex()}",
-        "name": req["name"],
-        "type": req["type"],
-        "size": req["size"],
-        "date": datetime.now().strftime('%d/%m/%Y %H:%M'),
-        "dueDate": req["dueDate"],
-        "sender": req["sender"],
-        "targets": req["targets"],
-        "dataUrl": req["dataUrl"]
-    }
-    data["files"].insert(0, new_file)
-    save_data(data)
-    return jsonify({"status": "ok"})
-
-@app.route("/api/ciente", methods=["POST"])
-def post_ciente():
-    req = request.json
-    om = req["om"]
-    todayStr = req["todayStr"]
-    data = load_data()
-    
-    target_files = [f for f in data["files"] if om in f.get("targets", []) and f.get("dueDate") == todayStr]
-    has_today_ann = om in data["annotations"].get(todayStr, {}).get("targets", [])
-    
-    recorded_ids = []
-    for f in target_files:
-        recorded_ids.append(f["id"])
-    if has_today_ann:
-        recorded_ids.append(f"ann_{todayStr}")
-    
-    if not recorded_ids:
-        recorded_ids.append(f"gen_{todayStr}_{om}")
-        
-    for fid in recorded_ids:
-        if fid not in data["cientes"]:
-            data["cientes"][fid] = []
-        if not any(c["om"] == om for c in data["cientes"][fid]):
-            data["cientes"][fid].append({
-                "om": om,
-                "dateTime": datetime.now().strftime('%d/%m/%Y %H:%M')
-            })
-            
-    save_data(data)
-    return jsonify({"status": "ok"})
-
-@app.route("/api/delete-file", methods=["POST"])
-def delete_file():
-    fid = request.json.get("id")
-    data = load_data()
-    data["files"] = [f for f in data["files"] if f["id"] != fid]
-    save_data(data)
-    return jsonify({"status": "ok"})
-
-@app.route("/api/clear-files", methods=["POST"])
-def clear_files():
-    data = load_data()
-    data["files"] = []
-    save_data(data)
-    return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
